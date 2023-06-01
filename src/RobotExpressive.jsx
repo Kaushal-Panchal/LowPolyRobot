@@ -6,7 +6,7 @@ Command: npx gltfjsx@6.1.11 RobotExpressive.glb --shadows
 import React, { useRef, useLayoutEffect, useEffect, useState } from 'react';
 import { useGLTF, useAnimations, useScroll } from '@react-three/drei';
 
-import { act, applyProps, useFrame } from '@react-three/fiber';
+import { act, applyProps, useFrame, useThree } from '@react-three/fiber';
 import { shallow } from 'zustand/shallow';
 
 import * as THREE from 'three';
@@ -14,15 +14,12 @@ import { FlakesTexture } from 'three/examples/jsm/textures/FlakesTexture';
 import { button, useControls } from 'leva';
 import { useStore } from './store/store';
 
-export function RobotExpressive(props) {
+export function RobotExpressive({ controls, ...props }) {
     const group = useRef();
     const { nodes, materials, animations, scene } = useGLTF('/RobotExpressive.glb');
     const { actions, names, mixer } = useAnimations(animations, group);
-
-    // const acceleration = useStore((state) => state.acceleration);
-    // const setAcceleration = useStore((state) => state.setAcceleration);
-    // const currentAction = useStore((state) => state.currentAction);
     const { acceleration, setAcceleration, currentAction, setCurrentAction } = useStore();
+    const { camera, controls: orbitControls } = useThree();
 
     const scrollRef = useRef(0);
     const previousScrollRef = useRef(0);
@@ -31,18 +28,10 @@ export function RobotExpressive(props) {
     useFrame(() => {
         const scrollDelta = data.scroll.current - previousScrollRef.current;
         previousScrollRef.current = data.scroll.current;
-        console.log('Scroll Delta', scrollDelta);
         if (scrollDelta > 0) {
-            setAcceleration(acceleration + scrollDelta);
+            setAcceleration(acceleration + scrollDelta * controls['Scroll Amplitude']);
         } else if (acceleration > 0) {
-            // let target = acceleration - 0.05;
-            // if (acceleration < 3) {
-            //     target = acceleration - (acceleration * acceleration) / 50;
-            // }
-
             let target = acceleration - (acceleration * acceleration) / 50;
-
-            // console.log('Target ', target);
             setAcceleration(target);
         }
     });
@@ -62,28 +51,8 @@ export function RobotExpressive(props) {
             'normalMap-repeat': [40, 40],
             normalScale: [0.05, 0.05],
         });
-        // activateAllActions();
+        actions['Idle'].play();
     }, [scene]);
-
-    const playAnimation = (v) => {
-        console.log(v);
-        actions[v].reset().fadeIn(0.5).play();
-    };
-
-    const stopAllActions = () => {
-        mixer.stopAllAction();
-    };
-
-    const handleCrossFadeClick = (get) => {
-        prepareCrossFade(get('StartAction'), get('EndAction'), get('Duration'));
-        //prepareCrossFade('Idle', 'Walking');
-    };
-
-    const [makeSingleStep, setMakeSingleStep] = useState(false);
-
-    const takeSingleStep = () => {
-        setMakeSingleStep(true);
-    };
 
     const prepareCrossFade = (startActionName, endActionName, duration) => {
         // Walking & Running
@@ -96,12 +65,12 @@ export function RobotExpressive(props) {
         // If the current action is 'idle', execute the crossfade immediately;
         // else wait until the current action has finished its current loop
 
-        // if (startAction === idleAction) {
-        //     executeCrossFade(startAction, endAction, duration);
-        // } else {
-        //     synchronizeCrossFade(startAction, endAction, duration);
-        // }
-        synchronizeCrossFade(startAction, endAction, duration);
+        if (startAction === idleAction) {
+            executeCrossFade(startAction, endAction, duration);
+        } else {
+            synchronizeCrossFade(startAction, endAction, duration);
+        }
+        // synchronizeCrossFade(startAction, endAction, duration);
     };
 
     const synchronizeCrossFade = (startAction, endAction, duration) => {
@@ -119,9 +88,6 @@ export function RobotExpressive(props) {
     };
 
     const executeCrossFade = (startAction, endAction, duration) => {
-        console.log('Execute Cross Fade');
-        // startAction.stop();
-
         endAction.play();
         setWeight(endAction, 1);
         endAction.time = 0;
@@ -134,71 +100,7 @@ export function RobotExpressive(props) {
         action.setEffectiveWeight(weight);
     };
 
-    const [controls, set] = useControls(() => ({
-        action: {
-            options: names,
-            onChange: (v) => {
-                playAnimation(v);
-            },
-            value: 'Idle',
-        },
-        stop: button(stopAllActions),
-        timeScale: {
-            value: 0.6,
-            min: 0.0,
-            max: 1.5,
-            step: 0.01,
-            onChange: (v) => {
-                mixer.timeScale = v;
-            },
-        },
-        StartAction: {
-            options: names,
-        },
-        EndAction: {
-            options: names,
-        },
-        Duration: {
-            value: 3.0,
-            min: 0.0,
-            max: 10.0,
-            step: 0.01,
-        },
-
-        'Cross Fade': button(handleCrossFadeClick, {}),
-        'Single Step Mode': {
-            value: false,
-        },
-
-        'Size Of Step': {
-            value: 1.0,
-            min: 0.0,
-            max: 10.0,
-            step: 0.01,
-        },
-        'Single Step': button(takeSingleStep, {}),
-    }));
-    useFrame((state, delta) => {
-        if (controls['Single Step Mode']) {
-            if (makeSingleStep) {
-                console.log('Here');
-                mixer.update(controls['Size Of Step']);
-                setMakeSingleStep(false);
-            } else {
-                console.log('Here in 0');
-                mixer.update(0);
-            }
-        } else {
-            mixer.update(delta);
-        }
-    });
-
-    useEffect(() => {
-        console.log('Controls updated', controls);
-    }, [controls]);
-
     const handleAnimationChange = async (acceleration) => {
-        // console.log('Accleration ', Math.round(acceleration));
         const roundedAccleration = Math.round(acceleration);
         if (roundedAccleration === 0) {
             // Run Idle Action
@@ -206,13 +108,13 @@ export function RobotExpressive(props) {
                 prepareCrossFade(currentAction, 'Idle', controls['Duration']);
                 setCurrentAction('Idle');
             }
-        } else if (roundedAccleration <= 2 && roundedAccleration > 0) {
+        } else if (roundedAccleration <= controls['Walking Threshold'] && roundedAccleration > 0) {
             // Run Walking Action
             if (currentAction !== 'Walking') {
                 prepareCrossFade(currentAction, 'Walking', controls['Duration']);
                 setCurrentAction('Walking');
             }
-        } else if (roundedAccleration > 4) {
+        } else if (roundedAccleration > controls['Walking Threshold']) {
             // Run Running Action
             if (currentAction !== 'Running') {
                 prepareCrossFade(currentAction, 'Running', controls['Duration']);
@@ -224,9 +126,21 @@ export function RobotExpressive(props) {
     useEffect(() => {
         if (acceleration) {
             handleAnimationChange(acceleration);
+
+            const cameraPosition = camera.position;
+            // cameraPosition.z = group.current.position.z + 16;
+            cameraPosition.z = THREE.MathUtils.lerp(cameraPosition.z, group.current.position.z + 16, 0.01);
+            // camera.position.lerp(group.current.position, 0.01);
+
+            if (orbitControls) {
+                orbitControls.target = target;
+            }
         }
-        // console.log('Accleration ', acceleration, ' Round = ', Math.round(acceleration));
     }, [acceleration]);
+
+    useEffect(() => {
+        mixer.timeScale = controls['Time Scale'];
+    }, [controls['Time Scale']]);
 
     return (
         <group ref={group} {...props} dispose={null}>

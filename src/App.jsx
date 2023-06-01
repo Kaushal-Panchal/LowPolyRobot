@@ -15,15 +15,45 @@ import {
 import Robot from './Robot';
 import { RobotExpressive } from './RobotExpressive';
 import { useControls } from 'leva';
+import { Box } from './Box';
+import { Forest } from './Forest';
 
 function App() {
+    const [controls, set] = useControls(() => ({
+        'Time Scale': {
+            value: 1,
+            min: 0.0,
+            max: 5,
+            step: 0.1,
+        },
+        Duration: {
+            value: 3.0,
+            min: 0.0,
+            max: 10.0,
+            step: 0.01,
+        },
+        'Scroll Amplitude': {
+            min: 1.0,
+            value: 1.0,
+            max: 10.0,
+        },
+        'Walking Threshold': {
+            value: 2,
+            min: 2,
+            max: 10,
+        },
+        'Damping Scroll': {
+            value: 10,
+        },
+    }));
     return (
         <div id="canvas">
-            <Canvas shadows camera={{ position: [8, 3.5, 8], fov: 35 }}>
-                <ScrollControls damping={4} infinite={true}>
+            <Canvas shadows camera={{ position: [20, 20, 16], fov: 35, zoom: 1.3 }}>
+                <ScrollControls damping={controls['Damping Scroll']} infinite={true}>
                     <Center top>
-                        <RobotExpressive scale={[0.5, 0.5, 0.5]} position={[0, 0.5, 0]} />
+                        <RobotExpressive scale={[0.5, 0.5, 0.5]} position={[0, 0.5, 0]} controls={controls} />
                     </Center>
+                    <Forest position={[0, 0, -10]} />
                     {/* <ambientLight intensity={0.001} /> */}
                     <directionalLight
                         position={[-5, 5, 5]}
@@ -37,11 +67,8 @@ function App() {
                         bias={0.001}
                         color={'goldenrod'}
                     />
+                    {/* <Box controls={controls} /> */}
 
-                    <mesh castShadow position={[-2, 0.25, 0]}>
-                        <boxGeometry args={[0.5, 0.5, 0.5]} />
-                        <meshStandardMaterial />
-                    </mesh>
                     {/* <AccumulativeShadows
                     temporal
                     frames={100}
@@ -66,7 +93,7 @@ function App() {
                         <planeBufferGeometry args={[10, 10, 1, 1]} />
                         <shadowMaterial transparent opacity={0.2} />
                     </mesh>
-                    {/* <OrbitControls minPolarAngle={0} maxPolarAngle={Math.PI / 2} enableZoom={false} /> */}
+                    <OrbitControls minPolarAngle={0} maxPolarAngle={Math.PI / 2} enableZoom={false} />
                     <Environment preset="city" />
                     {/* <Grid position={[0, -0.01, 0]} args={[10, 10, 10]} /> */}
                 </ScrollControls>
