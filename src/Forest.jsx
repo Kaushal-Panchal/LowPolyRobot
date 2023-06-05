@@ -1,4 +1,4 @@
-import { Center, Detailed, useGLTF } from '@react-three/drei';
+import { Center, Detailed, useGLTF, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from './store/store';
@@ -124,6 +124,34 @@ function RoadSetup({ ...props }) {
             <Road rotation={[0, Math.PI / 2, 0]} scale={[0.1, 0.1, 0.1]} position={[0, -0.8, 40]} />
             <Road rotation={[0, Math.PI / 2, 0]} scale={[0.1, 0.1, 0.1]} position={[0, -0.8, 60]} />
         </group>
+    );
+}
+
+function Plane({ ...props }) {
+    const ref = useRef(null);
+    const texture = useTexture('./groundTexture.jpg');
+    texture.wrapS = RepeatWrapping;
+    texture.wrapT = RepeatWrapping;
+    texture.repeat.set(2, 2);
+
+    const { acceleration, setAcceleration, currentAction, setCurrentAction } = useStore();
+    useFrame((state, delta) => {
+        if (!isNaN(ref?.current?.position?.z)) {
+            ref.current.position.z = ref.current.position.z - acceleration * delta;
+            if (ref?.current.position.z <= -20) {
+                ref.current.position.z = 0;
+            }
+        }
+    });
+
+    // By the time we're here these GLTFs exist, they're loaded
+    // There are 800 instances of this component, but the GLTF data is cached and will be re-used ootb
+    return (
+        <mesh ref={ref} position={[0, -2, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[5, 5, 5]}>
+            <planeGeometry args={[30, 30, 5, 5]} />
+
+            <meshStandardMaterial map={texture} />
+        </mesh>
     );
 }
 

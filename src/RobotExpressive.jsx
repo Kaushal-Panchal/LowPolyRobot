@@ -4,7 +4,7 @@ Command: npx gltfjsx@6.1.11 RobotExpressive.glb --shadows
 */
 
 import React, { useRef, useLayoutEffect, useEffect, useState } from 'react';
-import { useGLTF, useAnimations, useScroll } from '@react-three/drei';
+import { useGLTF, useAnimations, useScroll, useTexture } from '@react-three/drei';
 
 import { act, applyProps, useFrame, useThree } from '@react-three/fiber';
 import { shallow } from 'zustand/shallow';
@@ -26,6 +26,7 @@ export function RobotExpressive({ controls, ...props }) {
     const data = useScroll();
 
     useFrame(() => {
+        // console.log('Scroll Data Delta', data.delta);
         const scrollDelta = data.scroll.current - previousScrollRef.current;
         previousScrollRef.current = data.scroll.current;
         if (scrollDelta > 0) {
@@ -132,9 +133,9 @@ export function RobotExpressive({ controls, ...props }) {
             cameraPosition.z = THREE.MathUtils.lerp(cameraPosition.z, group.current.position.z + 16, 0.01);
             // camera.position.lerp(group.current.position, 0.01);
 
-            if (orbitControls) {
-                orbitControls.target = target;
-            }
+            // if (orbitControls) {
+            //     orbitControls.target = target;
+            // }
         }
     }, [acceleration]);
 
