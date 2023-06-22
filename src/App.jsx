@@ -14,7 +14,7 @@ import {
 } from '@react-three/drei';
 import Robot from './Robot';
 import { RobotExpressive } from './RobotExpressive';
-import { useControls } from 'leva';
+import { folder, useControls } from 'leva';
 import { Box } from './Box';
 import { Forest } from './Forest';
 
@@ -43,17 +43,25 @@ function App() {
             max: 10,
         },
         'Damping Scroll': {
-            value: 10,
+            value: 0.5,
+            min: 0,
+            max: 20,
+        },
+        'Env Accleration': {
+            value: 1.0,
+            min: 0.0,
+            max: 10.0,
+            step: 0.01,
         },
     }));
     return (
         <div id="canvas">
             <Canvas shadows camera={{ position: [20, 20, 16], fov: 35, zoom: 1.3 }}>
-                <ScrollControls damping={controls['Damping Scroll']} infinite={true}>
+                <ScrollControls distance={100} damping={controls['Damping Scroll']} infinite={true}>
                     <Center top>
                         <RobotExpressive scale={[0.5, 0.5, 0.5]} position={[0, 0.5, 0]} controls={controls} />
                     </Center>
-                    <Forest position={[0, 0, -10]} />
+                    <Forest position={[0, 0, -10]} envAcclerationFac={controls['Env Accleration']} />
                     {/* <ambientLight intensity={0.001} /> */}
                     <directionalLight
                         position={[-5, 5, 5]}
@@ -73,7 +81,8 @@ function App() {
                         <shadowMaterial transparent opacity={0.2} />
                     </mesh>
                     {/* <OrbitControls minPolarAngle={0} maxPolarAngle={Math.PI / 2} enableZoom={false} /> */}
-                    <Environment preset="city" />
+                    {/* <Environment preset="city" /> */}
+                    <Environment path="/hdri/" files="potsdamer_platz_1k.hdr" />
                     {/* <Grid position={[0, -0.01, 0]} args={[10, 10, 10]} /> */}
                 </ScrollControls>
             </Canvas>

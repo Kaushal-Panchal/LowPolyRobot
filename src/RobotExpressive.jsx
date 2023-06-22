@@ -19,21 +19,41 @@ export function RobotExpressive({ controls, ...props }) {
     const { nodes, materials, animations, scene } = useGLTF('/RobotExpressive.glb');
     const { actions, names, mixer } = useAnimations(animations, group);
     const { acceleration, setAcceleration, currentAction, setCurrentAction } = useStore();
-    const { camera, controls: orbitControls } = useThree();
+    const { camera, controls: orbitControls, clock } = useThree();
 
-    const scrollRef = useRef(0);
-    const previousScrollRef = useRef(0);
     const data = useScroll();
 
-    useFrame(() => {
-        // console.log('Scroll Data Delta', data.delta);
-        const scrollDelta = data.scroll.current - previousScrollRef.current;
-        previousScrollRef.current = data.scroll.current;
-        if (scrollDelta > 0) {
-            setAcceleration(acceleration + scrollDelta * controls['Scroll Amplitude']);
-        } else if (acceleration > 0) {
-            let target = acceleration - (acceleration * acceleration) / 50;
-            setAcceleration(target);
+    const previousScrollRef = useRef(0);
+    const frameCount = useRef(0);
+    const totalScrolls = useRef(0);
+    const sumDelta = useRef(0);
+    const targetAccleration = useRef(0);
+    let scrollDelta = 0;
+    useFrame((state, delta) => {
+        if (frameCount.current === 20) {
+            scrollDelta = data.scroll.current - previousScrollRef.current;
+            previousScrollRef.current = data.scroll.current;
+            frameCount.current = 0;
+        } else {
+            frameCount.current++;
+        }
+        sumDelta.current = sumDelta.current + delta;
+
+        if (scrollDelta > 0.02) {
+            totalScrolls.current++;
+        }
+        // Play animation based on totalScroll every 2 second and reset totalScroll to 0
+
+        if (sumDelta.current > 2) {
+            // Play Animation
+            handleAnimationChangeScrollCount(totalScrolls.current);
+            totalScrolls.current = 0;
+            sumDelta.current = 0;
+        }
+
+        if (targetAccleration.current !== acceleration) {
+            const lerpValue = THREE.MathUtils.lerp(acceleration, targetAccleration.current, 0.01);
+            setAcceleration(lerpValue);
         }
     });
 
@@ -101,43 +121,30 @@ export function RobotExpressive({ controls, ...props }) {
         action.setEffectiveWeight(weight);
     };
 
-    const handleAnimationChange = async (acceleration) => {
-        const roundedAccleration = Math.round(acceleration);
-        if (roundedAccleration === 0) {
+    const handleAnimationChangeScrollCount = async (scrollCount) => {
+        if (scrollCount === 0) {
             // Run Idle Action
             if (currentAction !== 'Idle') {
                 prepareCrossFade(currentAction, 'Idle', controls['Duration']);
                 setCurrentAction('Idle');
+                targetAccleration.current = 0;
             }
-        } else if (roundedAccleration <= controls['Walking Threshold'] && roundedAccleration > 0) {
+        } else if (scrollCount <= controls['Walking Threshold'] && scrollCount > 0) {
             // Run Walking Action
             if (currentAction !== 'Walking') {
                 prepareCrossFade(currentAction, 'Walking', controls['Duration']);
                 setCurrentAction('Walking');
+                targetAccleration.current = 3;
             }
-        } else if (roundedAccleration > controls['Walking Threshold']) {
+        } else if (scrollCount > controls['Walking Threshold']) {
             // Run Running Action
             if (currentAction !== 'Running') {
                 prepareCrossFade(currentAction, 'Running', controls['Duration']);
                 setCurrentAction('Running');
+                targetAccleration.current = 5;
             }
         }
     };
-
-    useEffect(() => {
-        if (acceleration) {
-            handleAnimationChange(acceleration);
-
-            const cameraPosition = camera.position;
-            // cameraPosition.z = group.current.position.z + 16;
-            cameraPosition.z = THREE.MathUtils.lerp(cameraPosition.z, group.current.position.z + 16, 0.01);
-            // camera.position.lerp(group.current.position, 0.01);
-
-            // if (orbitControls) {
-            //     orbitControls.target = target;
-            // }
-        }
-    }, [acceleration]);
 
     useEffect(() => {
         mixer.timeScale = controls['Time Scale'];

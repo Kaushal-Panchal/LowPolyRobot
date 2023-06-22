@@ -1,4 +1,4 @@
-import { Center, Detailed, useGLTF, useTexture } from '@react-three/drei';
+import { Center, Detailed, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from './store/store';
@@ -7,7 +7,7 @@ function map_range(value, low1, high1, low2, high2) {
     return low2 + ((high2 - low2) * (value - low1)) / (high1 - low1);
 }
 
-export const Forest = ({ ...props }) => {
+export const Forest = ({ envAcclerationFac, ...props }) => {
     const [positions, setPositions] = useState([]);
     const [rockPositions, setRockPositions] = useState([]);
     const [bigLongRocksPositions, setBigLongRocksPositions] = useState([]);
@@ -79,24 +79,24 @@ export const Forest = ({ ...props }) => {
 
     return (
         <group {...props}>
-            <RoadSetup />
+            <RoadSetup envAcclerationFac={envAcclerationFac} />
             {positions.map((props, i) => (
-                <Cactus key={i} {...props} />
+                <Cactus envAcclerationFac={envAcclerationFac} key={i} {...props} />
             ))}
             {bigLongRocksPositions.map((props, i) => (
-                <LongRock key={i} {...props} />
+                <LongRock envAcclerationFac={envAcclerationFac} key={i} {...props} />
             ))}
             {rockPositions.map((props, i) => (
-                <Rock key={i} {...props} />
+                <Rock envAcclerationFac={envAcclerationFac} key={i} {...props} />
             ))}
             {wideRocksPositions.map((props, i) => (
-                <WideRock key={i} {...props} />
+                <WideRock envAcclerationFac={envAcclerationFac} key={i} {...props} />
             ))}
         </group>
     );
 };
 
-function RoadSetup({ ...props }) {
+function RoadSetup({ envAcclerationFac, ...props }) {
     const ref = useRef(null);
 
     // This will load 4 GLTF in parallel using React Suspense
@@ -107,7 +107,7 @@ function RoadSetup({ ...props }) {
     // Move each tree towards starting when reaches the end line
     useFrame((state, delta) => {
         if (!isNaN(ref?.current?.position?.z)) {
-            ref.current.position.z = ref.current.position.z - acceleration * delta;
+            ref.current.position.z = ref.current.position.z - acceleration * delta * envAcclerationFac;
             if (ref?.current.position.z <= -20) {
                 ref.current.position.z = 0;
             }
@@ -127,35 +127,35 @@ function RoadSetup({ ...props }) {
     );
 }
 
-function Plane({ ...props }) {
-    const ref = useRef(null);
-    const texture = useTexture('./groundTexture.jpg');
-    texture.wrapS = RepeatWrapping;
-    texture.wrapT = RepeatWrapping;
-    texture.repeat.set(2, 2);
+// function Plane({ envAcclerationFac,...props }) {
+//     const ref = useRef(null);
+//     const texture = useTexture('./groundTexture.jpg');
+//     texture.wrapS = RepeatWrapping;
+//     texture.wrapT = RepeatWrapping;
+//     texture.repeat.set(2, 2);
 
-    const { acceleration, setAcceleration, currentAction, setCurrentAction } = useStore();
-    useFrame((state, delta) => {
-        if (!isNaN(ref?.current?.position?.z)) {
-            ref.current.position.z = ref.current.position.z - acceleration * delta;
-            if (ref?.current.position.z <= -20) {
-                ref.current.position.z = 0;
-            }
-        }
-    });
+//     const { acceleration, setAcceleration, currentAction, setCurrentAction } = useStore();
+//     useFrame((state, delta) => {
+//         if (!isNaN(ref?.current?.position?.z)) {
+//             ref.current.position.z = ref.current.position.z - acceleration * delta * envAcclerationFac;
+//             if (ref?.current.position.z <= -20) {
+//                 ref.current.position.z = 0;
+//             }
+//         }
+//     });
 
-    // By the time we're here these GLTFs exist, they're loaded
-    // There are 800 instances of this component, but the GLTF data is cached and will be re-used ootb
-    return (
-        <mesh ref={ref} position={[0, -2, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[5, 5, 5]}>
-            <planeGeometry args={[30, 30, 5, 5]} />
+//     // By the time we're here these GLTFs exist, they're loaded
+//     // There are 800 instances of this component, but the GLTF data is cached and will be re-used ootb
+//     return (
+//         <mesh ref={ref} position={[0, -2, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[5, 5, 5]}>
+//             <planeGeometry args={[30, 30, 5, 5]} />
 
-            <meshStandardMaterial map={texture} />
-        </mesh>
-    );
-}
+//             <meshStandardMaterial map={texture} />
+//         </mesh>
+//     );
+// }
 
-function Road({ ...props }) {
+function Road({ envAcclerationFac, ...props }) {
     const ref = useRef(null);
 
     // This will load 4 GLTF in parallel using React Suspense
@@ -177,7 +177,7 @@ function Road({ ...props }) {
     );
 }
 
-function Rock({ ...props }) {
+function Rock({ envAcclerationFac, ...props }) {
     const ref = useRef(null);
 
     // This will load 4 GLTF in parallel using React Suspense
@@ -191,7 +191,7 @@ function Rock({ ...props }) {
 
         if (ref?.current?.position?.z) {
             // console.log('Inside useFrame ', currentAction);
-            ref.current.position.z = ref.current.position.z - acceleration * delta;
+            ref.current.position.z = ref.current.position.z - acceleration * delta * envAcclerationFac;
             if (ref?.current.position.z <= -30) {
                 // ref.current.position.z = map_range(Math.random(), 0, 1, 10, 50);
                 ref.current.position.z = 50;
@@ -213,7 +213,7 @@ function Rock({ ...props }) {
     );
 }
 
-function WideRock({ ...props }) {
+function WideRock({ envAcclerationFac, ...props }) {
     const ref = useRef(null);
 
     // This will load 4 GLTF in parallel using React Suspense
@@ -227,7 +227,7 @@ function WideRock({ ...props }) {
 
         if (ref?.current?.position?.z) {
             // console.log('Inside useFrame ', currentAction);
-            ref.current.position.z = ref.current.position.z - acceleration * delta;
+            ref.current.position.z = ref.current.position.z - acceleration * delta * envAcclerationFac;
             if (ref?.current.position.z <= -30) {
                 // ref.current.position.z = map_range(Math.random(), 0, 1, 10, 50);
                 ref.current.position.z = 30;
@@ -249,7 +249,7 @@ function WideRock({ ...props }) {
     );
 }
 
-function LongRock({ ...props }) {
+function LongRock({ envAcclerationFac, ...props }) {
     const ref = useRef(null);
 
     // This will load 4 GLTF in parallel using React Suspense
@@ -263,7 +263,7 @@ function LongRock({ ...props }) {
 
         if (ref?.current?.position?.z) {
             // console.log('Inside useFrame ', currentAction);
-            ref.current.position.z = ref.current.position.z - acceleration * delta;
+            ref.current.position.z = ref.current.position.z - acceleration * delta * envAcclerationFac;
             if (ref?.current.position.z <= -30) {
                 // ref.current.position.z = map_range(Math.random(), 0, 1, 10, 50);
                 ref.current.position.z = 30;
@@ -284,7 +284,7 @@ function LongRock({ ...props }) {
         </Detailed>
     );
 }
-function Cactus({ ...props }) {
+function Cactus({ envAcclerationFac, ...props }) {
     const ref = useRef(null);
 
     // This will load 4 GLTF in parallel using React Suspense
@@ -298,7 +298,7 @@ function Cactus({ ...props }) {
 
         if (ref?.current?.position?.z) {
             // console.log('Inside useFrame ', currentAction);
-            ref.current.position.z = ref.current.position.z - acceleration * delta;
+            ref.current.position.z = ref.current.position.z - acceleration * delta * envAcclerationFac;
             if (ref?.current.position.z <= -30) {
                 // ref.current.position.z = map_range(Math.random(), 0, 1, 10, 50);
                 ref.current.position.z = 25;

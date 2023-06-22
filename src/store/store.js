@@ -5,4 +5,6 @@ export const useStore = create((set) => ({
     setAcceleration: (value) => set({ acceleration: value }),
     currentAction: 'Idle',
     setCurrentAction: (value) => set({ currentAction: value }),
+    envAcclerationFac: 1,
+    setEnvAcclerationFac: (value) => set({ envAcclerationFac: value }),
 }));
